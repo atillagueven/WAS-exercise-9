@@ -62,8 +62,9 @@ robot_td("https://raw.githubusercontent.com/Interactions-HSG/example-tds/main/td
  * Context: true (the plan is always applicable)
  * Body: prints new certified reputation rating (relevant from Task 3 and on)
 */
-+certified_reputation(CertificationAgent, SourceAgent, MessageContent, CRRating): true <-
-	.print("Certified Reputation Rating: (", CertificationAgent, ", ", SourceAgent, ", ", MessageContent, ", ", CRRating, ")").
++certified_reputation(CertificationAgent, SourceAgent, MessageContent, CRRating)[source(Ag)]: true <-
+	.print("Certified Reputation Rating: (", CertificationAgent, ", ", SourceAgent, ", ", MessageContent, ", ", CRRating, ")");
+	add_certified_reputation(Ag, CRRating).
 
 /* 
  * Plan for reacting to the addition of the witness_reputation(WitnessAgent, SourceAgent, MessageContent, WRRating)
@@ -71,8 +72,9 @@ robot_td("https://raw.githubusercontent.com/Interactions-HSG/example-tds/main/td
  * Context: true (the plan is always applicable)
  * Body: prints new witness reputation rating (relevant from Task 5 and on)
 */
-+witness_reputation(WitnessAgent, SourceAgent, MessageContent, WRRating): true <-
-	.print("Witness Reputation Rating: (", WitnessAgent, ", ", SourceAgent, ", ", MessageContent, ", ", WRRating, ")").
++witness_reputation(WitnessAgent, SourceAgent, MessageContent, WRRating)[source(Ag)]: true <-
+	.print("Witness Reputation Rating: (", WitnessAgent, ", ", SourceAgent, ", ", MessageContent, ", ", WRRating, ")")
+	add_witness_reputation(SourceAgent, WRRating).
 
 /* 
  * Plan for reacting to the addition of the goal !select_reading(TempReadings, Celcius)
@@ -80,9 +82,31 @@ robot_td("https://raw.githubusercontent.com/Interactions-HSG/example-tds/main/td
  * Context: true (the plan is always applicable)
  * Body: unifies the variable Celcius with the 1st temperature reading from the list TempReadings
 */
+//from exercise sheet - acting agent select randomly at the moment
 @select_reading_task_0_plan
-+!select_reading(TempReadings, Celcius) : true <-
-    .nth(0, TempReadings, Celcius).
++!select_reading(Agent) : true <-
+	.findall([X, Y], temperature(X)[source(Y)], TempAgValues);
+	.findall(K, .member([K, _], TempAgValues), TempValues);
+	.findall(K, .member([_, K], TempAgValues), AgValues);
+	for ( .range(I, 0, (.length(TempValues) - 1)) ) {
+        .nth(I, AgValues, Ag);
+		equals(Ag, Agent, X);
+		if(X) {
+			.nth(I, TempValues, Temp);
+			+temp_to_send(Temp);
+		}
+    }.
+
+
+
+@init_rating_plan
++!init_rating: true <-
+	.findall(Src, temperature(_)[source(Src)], SourceAgents);
+	for (.member(Agent, SourceAgents)) {
+		.findall(ITRating, interaction_trust(_, Agent, _, ITRating), ITRatings);
+		initialize_average_rating(Agent, ITRatings, AvgITRating);
+		.print("Avg ITRating: ", AvgITRating, " of Agent: ", Agent);
+	}.
 
 /* 
  * Plan for reacting to the addition of the goal !manifest_temperature
@@ -95,14 +119,36 @@ robot_td("https://raw.githubusercontent.com/Interactions-HSG/example-tds/main/td
 */
 @manifest_temperature_plan 
 +!manifest_temperature : robot_td(Location) <-
-
 	// creates list TempReadings with all the broadcasted temperature readings
-	.findall(TempReading, temperature(TempReading)[source(Ag)], TempReadings);
-	.print("Temperature readings to evaluate:", TempReadings);
-
+	// .findall(Ag, temperature(TempReading)[source(Ag)], TempReadings);
+	!init_rating;
+	!finding_agent_cer;
+	.wait(4000);
+	!query_witness_reputations;
+	.wait(6000);
+	get_most_trusted(Agent, Rating);
+	.print("I am most trusted Agent: ", Agent, " with a rating of: ", Rating);
 	// creates goal to select one broadcasted reading to manifest
-	!select_reading(TempReadings, Celcius);
+	!select_reading(Agent);
+	!send_temperature.
 
+@finding_agent_cer_plan
++!finding_agent_cer : true <-
+	.findall(Ag, temperature(_)[source(Ag)], Agents);
+
+	for ( .member(Ag, Agents) ) {
+		.send(Ag, tell, send_certificate);
+    }.
+
+@query_witness_reputation_plan
++!query_witness_reputations : true <-
+	.findall(Ag, temperature(_)[source(Ag)], Agents);
+	for ( .member(Ag, Agents) ) {
+		.send(Ag, tell, send_witness_rep);
+    }.
+
+@send_temperature_plan
++!send_temperature : temp_to_send(Celcius) & robot_td(Location) <-
 	// manifests the selected reading stored in the variable Celcius
 	.print("Manifesting temperature (Celcius): ", Celcius);
 	convert(Celcius, -20.00, 20.00, 200.00, 830.00, Degrees)[artifact_id(ConverterId)]; // converts Celcius to binary degress based on the input scale

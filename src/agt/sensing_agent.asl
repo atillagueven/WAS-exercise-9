@@ -37,6 +37,25 @@ i_have_plans_for(R) :- not (role_goal(R,G) & not has_plan_for(G)).
 	.print("Read temperature (Celcius): ", Celcius);
 	.broadcast(tell, temperature(Celcius)). // broadcasts the temperature reading
 
++send_witness_rep : true <-
+		.findall([X, Y], temperature(X)[source(Y)], TempAgValues);
+		.findall(K, .member([K, _], TempAgValues), TempValues);
+		.findall(K, .member([_, K], TempAgValues), AgValues);
+    for ( .range(I, 0, (.length(TempValues) - 1)) ) {
+    	.nth(I, AgValues, Ag);
+        .my_name(Me);
+        is_rogue_agent(Ag, X);
+        .nth(I, TempValues, Temp);
+        if(not X) {
+            .print("Sent: ", 1, " for agent: ", Ag);
+          		.send(acting_agent, tell, witness_reputation(Me, Ag, temperature(Temp)[source(Ag)], 1));
+        } else {
+            .print("Sent: ", -1, " for agent: ", Ag);
+          		.send(acting_agent, tell, witness_reputation(Me, Ag, temperature(Temp)[source(Ag)], -1));
+        }
+    }.
+
+
 /* 
  * Plan for reacting to the addition of the belief organization_deployed(OrgName)
  * Triggering event: addition of belief organization_deployed(OrgName)
@@ -84,6 +103,10 @@ i_have_plans_for(R) :- not (role_goal(R,G) & not has_plan_for(G)).
 */
 +certified_reputation(CertificationAgent, SourceAgent, MessageContent, CRRating): true <-
 	.print("Certified Reputation Rating: (", CertificationAgent, ", ", SourceAgent, ", ", MessageContent, ", ", CRRating, ")").
+
++send_certificate[source(Src)] : certified_reputation(CertificationAgent, TargetAgent, MessageContent, CRRating) <-
+	.print("Sending certificate to ", Src);
+	.send(Src, tell, certified_reputation(CertificationAgent, TargetAgent, MessageContent, CRRating)).
 
 /* Import behavior of agents that work in CArtAgO environments */
 { include("$jacamoJar/templates/common-cartago.asl") }

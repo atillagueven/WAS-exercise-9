@@ -9,7 +9,9 @@ mas lab {
     agent org_agent 
 
     // rogue leader agent
-    agent sensing_agent_9 : rogue_leader_agent.asl {}
+    agent sensing_agent_9 : rogue_leader_agent.asl {
+            focus: itmanager
+    }
 
     // sensing agents
     agent sensing_agent_1 : sensing_agent.asl {
@@ -26,10 +28,18 @@ mas lab {
     }
 
     // rogue agents
-    agent sensing_agent_5 : rogue_agent.asl {}
-    agent sensing_agent_6 : rogue_agent.asl {}
-    agent sensing_agent_7 : rogue_agent.asl {}
-    agent sensing_agent_8 : rogue_agent.asl {}
+    agent sensing_agent_5 : rogue_agent.asl {
+      focus: itmanager
+    }
+    agent sensing_agent_6 : rogue_agent.asl {
+      focus: itmanager
+    }
+    agent sensing_agent_7 : rogue_agent.asl {
+      focus: itmanager
+    }
+    agent sensing_agent_8 : rogue_agent.asl {
+      focus: itmanager
+    }
 
     // acting agent
     agent acting_agent : acting_agent.asl {
@@ -42,5 +52,6 @@ mas lab {
     workspace lab {
         artifact weatherStation: tools.WeatherStation
         artifact converter: tools.Converter
+        artifact itmanager: tools.TrustManager
     }
 }
